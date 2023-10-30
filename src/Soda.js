@@ -3,31 +3,53 @@ import { Link } from "react-router-dom";
 import img from "./static/coke-can.jpg";
 import "./Soda.css";
 
+function useInterval(callback, delay) {
+    const savedCallback = useRef();
+
+    useEffect(() => {
+        savedCallback.current = callback;
+    }, [callback]);
+
+    useEffect(() => {
+        function tick() {
+            savedCallback.current();
+        }
+        if (delay !== null) {
+            let id = setInterval(tick, delay);
+            return () => clearInterval(id);
+        }
+    }, [delay]);
+}
+
 function Soda() {
     const [loaded, setLoaded] = useState(false);
     const [imageData, setImageData] = useState(null);
     const canvasRef1 = useRef();
     const canvasRef2 = useRef();
 
-    const [rotations, setRotations] = useState([null, null]);
+    const [rotations, setRotations] = useState({ 0: 0, 1: 0 });
 
-    const radian = (n) => n * (Math.PI / 180);
+    const radian = (n) => {
+        return n * (Math.PI / 180);
+    };
 
-    useEffect(() => {
-        const interval = setInterval(() => {
+    useInterval(() => {
+        if (loaded) {
+            const canvas1 = canvasRef1.current;
+            const canvas2 = canvasRef2.current;
             setRotations((r) => {
                 r[0] = r[0] + radian(1);
                 r[1] = r[0] + radian(1);
                 return r;
             });
-        });
-    });
+            draw(canvas1, rotations[0]);
+            draw(canvas2, rotations[1]);
+        }
+    }, 20);
+
+    const rotationJSON = JSON.stringify(rotations);
     useEffect(() => {
         if (loaded) {
-            const canvas1 = canvasRef1.current;
-            const canvas2 = canvasRef2.current;
-            drawOncanvas(canvas1);
-            drawOncanvas(canvas2);
         } else {
             const image = new Image();
             image.src = img;
@@ -38,11 +60,24 @@ function Soda() {
                 setLoaded(true);
             };
         }
-    }, [loaded]);
+    }, [rotations, rotationJSON, loaded]);
 
-    function drawOncanvas(canvas) {
+    function draw(canvas, rotation) {
         const context = canvas.getContext("2d");
-        context.drawImage(imageData.element, 0, 0, 346, 217);
+        const scale = 0.2;
+        let x = canvas.width / 2;
+        let y = canvas.height / 2;
+        context.translate(x, y);
+
+        context.rotate(rotation);
+        context.drawImage(
+            imageData.element,
+            (-imageData.element.width * scale) / 2,
+            (-imageData.element.height * scale) / 2,
+            imageData.element.width * scale,
+            imageData.element.height * scale
+        );
+        context.setTransform(1, 0, 0, 1, 0, 0);
     }
 
     return (
